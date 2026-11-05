@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="kk" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKELETON 3D – Адам қаңқасын интерактивті зерттеу платформасы</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfeff',
+                            100: '#cffafe',
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            900: '#164e63',
+                            dark: '#0b1329',
+                            card: '#131e3a',
+                            border: '#1e2d54'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js for 3D Graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Chart.js for Research Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #070c19;
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+        
+        /* Glassmorphism styles */
+        .glass-panel {
+            background: rgba(19, 30, 58, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(34, 211, 238, 0.15);
+        }
+
+        .glass-panel-active {
+            background: rgba(22, 78, 99, 0.4);
+            border-color: rgba(34, 211, 238, 0.5);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b1329;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e2d54;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #06b6d4;
+        }
+
+        /* Pulsing Glow Animation */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+        .pulse-glow {
+            animation: pulseGlow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+    <!-- TOP NAVIGATION HEADER -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-brand-border px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-cyan-500/20 p-2.5 rounded-xl border border-cyan-400/30 text-cyan-400 flex items-center justify-center">
+                    <i class="fa-solid fa-bone text-xl animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg md:text-xl tracking-wider text-white flex items-center gap-2">
+                        SKELETON <span class="text-cyan-400">3D</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">v2.5 Interactive</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 hidden sm:block">Адам қаңқасын интерактивті зерттеу және оқыту платформасы</p>
+                </div>
+            </div>
+
+            <!-- Nav Tabs -->
+            <nav class="flex items-center space-x-1 sm:space-x-2 bg-brand-dark/80 p-1 rounded-xl border border-brand-border">
+                <button id="tab-3d" onclick="switchTab('3d')" class="nav-btn px-3 md:px-5 py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex items-center gap-2 text-cyan-400 bg-cyan-500/10 border border-cyan-500/30">
+                    <i class="fa-solid fa-cube"></i>
+                    <span>3D Модель</span>
+                </button>
+                <button id="tab-research" onclick="switchTab('research')" class="nav-btn px-3 md:px-5 py-2 rounded-lg text-xs md:text-sm font-medium text-slate-400 hover:text-white transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-flask"></i>
+                    <span>Зерттеу Жобасы</span>
+                </button>
+                <button id="tab-quiz" onclick="switchTab('quiz')" class="nav-btn px-3 md:px-5 py-2 rounded-lg text-xs md:text-sm font-medium text-slate-400 hover:text-white transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span>Білім Тексеру (Тест)</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex-grow flex flex-col">
+
+        <!-- TAB 1: 3D MODEL & ANATOMY VIEWER SECTION -->
+        <section id="section-3d" class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+            <!-- Left Side: Controls & Body Regions -->
+            <div class="lg:col-span-3 space-y-4 flex flex-col">
+                <div class="glass-panel p-4 rounded-2xl border border-brand-border space-y-3">
+                    <h2 class="text-sm font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group"></i> Сүйек бөлімдері
+                    </h2>
+                    <p class="text-xs text-slate-400">Зерттегіңіз келетін қаңқа бөлімін таңдаңыз:</p>
+                    
+                    <div class="space-y-2" id="region-buttons">
+                        <button onclick="highlightRegion('skull')" class="region-btn w-full text-left px-3 py-2.5 rounded-xl text-xs md:text-sm font-medium bg-brand-card hover:bg-brand-border/60 border border-brand-border flex items-center justify-between transition group active">
+                            <span class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-head-side-virus text-cyan-400"></i> Бас сүйек (Skull)
+                            </span>
+                            <i class="fa-solid fa-chevron-right text-xs opacity-0 group-hover:opacity-100 text-cyan-400 transition"></i>
+                        </button>
+                        <button onclick="highlightRegion('spine')" class="region-btn w-full text-left px-3 py-2.5 rounded-xl text-xs md:text-sm font-medium bg-brand-card hover:bg-brand-border/60 border border-brand-border flex items-center justify-between transition group">
+                            <span class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-align-center text-cyan-400"></i> Омыртқа жотасы (Spine)
+                            </span>
+                            <i class="fa-solid fa-chevron-right text-xs opacity-0 group-hover:opacity-100 text-cyan-400 transition"></i>
+                        </button>
+                        <button onclick="highlightRegion('ribs')" class="region-btn w-full text-left px-3 py-2.5 rounded-xl text-xs md:text-sm font-medium bg-brand-card hover:bg-brand-border/60 border border-brand-border flex items-center justify-between transition group">
+                            <span class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-shield-halved text-cyan-400"></i> Көкірек қуысы (Thorax)
+                            </span>
+                            <i class="fa-solid fa-chevron-right text-xs opacity-0 group-hover:opacity-100 text-cyan-400 transition"></i>
+                        </button>
+                        <button onclick="highlightRegion('arms')" class="region-btn w-full text-left px-3 py-2.5 rounded-xl text-xs md:text-sm font-medium bg-brand-card hover:bg-brand-border/60 border border-brand-border flex items-center justify-between transition group">
+                            <span class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-hand text-cyan-400"></i> Жоғарғы аяқ (Қол)
+                            </span>
+                            <i class="fa-solid fa-chevron-right text-xs opacity-0 group-hover:opacity-100 text-cyan-400 transition"></i>
+                        </button>
+                        <button onclick="highlightRegion('legs')" class="region-btn w-full text-left px-3 py-2.5 rounded-xl text-xs md:text-sm font-medium bg-brand-card hover:bg-brand-border/60 border border-brand-border flex items-center justify-between transition group">
+                            <span class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-person-walking text-cyan-400"></i> Төменгі аяқ сүйектері
+                            </span>
+                            <i class="fa-solid fa-chevron-right text-xs opacity-0 group-hover:opacity-100 text-cyan-400 transition"></i>
+                        </button>
+                        <button onclick="highlightRegion('all')" class="region-btn w-full text-left px-3 py-2.5 rounded-xl text-xs md:text-sm font-medium bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-500/30 flex items-center justify-between transition text-cyan-300">
+                            <span class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-child text-cyan-400"></i> Толық қаңқа (Барлығы)
+                            </span>
+                            <i class="fa-solid fa-rotate-right text-xs text-cyan-400"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- View Interactive Hints -->
+                <div class="glass-panel p-4 rounded-2xl border border-brand-border space-y-2 flex-grow">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-cyan-400"></i> 3D Басқару Нұсқаулығы
+                    </h3>
+                    <ul class="text-xs text-slate-400 space-y-2">
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-computer-mouse text-cyan-400"></i> <span><b>Шыршаны айналдыру:</b> Тышқанның сол жақ батырмасымен сүйреңіз</span></li>
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-magnifying-glass-plus text-cyan-400"></i> <span><b>Масштабтау:</b> Дөңгелекті (Scroll) айналдырыңыз</span></li>
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-arrows-up-down-left-right text-cyan-400"></i> <span><b>Орын ауыстыру:</b> Оң жақ батырмамен сүйреңіз</span></li>
+                    </ul>
+                    <div class="pt-2 border-t border-brand-border/60">
+                        <button onclick="toggleAutoRotate()" id="btn-auto-rotate" class="w-full py-2 px-3 rounded-lg bg-brand-card hover:bg-brand-border text-xs text-cyan-300 border border-brand-border transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-arrows-spin"></i> <span>Авто-айналуды өшіру</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Canvas: 3D Interactive Viewer -->
+            <div class="lg:col-span-6 min-h-[420px] lg:min-h-[550px] relative glass-panel rounded-2xl overflow-hidden border border-brand-border flex flex-col justify-between">
+                <!-- 3D Canvas Canvas Container -->
+                <div id="canvas-container" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+                <!-- Overlay Info Tag -->
+                <div class="absolute top-4 left-4 pointer-events-none bg-brand-dark/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-brand-border text-xs text-slate-300 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                    <span>Режим: <strong id="active-region-title" class="text-cyan-400">Бас сүйек</strong></span>
+                </div>
+
+                <!-- Overlay Controls -->
+                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-brand-dark/90 backdrop-blur-md px-4 py-2 rounded-full border border-brand-border flex items-center gap-4 text-xs text-slate-300 shadow-xl">
+                    <button onclick="resetCamera()" class="hover:text-cyan-400 transition flex items-center gap-1" title="Камераны басына қайтару">
+                        <i class="fa-solid fa-house"></i> <span>Ортаға әкелу</span>
+                    </button>
+                    <span class="w-px h-4 bg-brand-border"></span>
+                    <button onclick="zoom3D(1.2)" class="hover:text-cyan-400 transition" title="Жақындату"><i class="fa-solid fa-plus"></i></button>
+                    <button onclick="zoom3D(0.8)" class="hover:text-cyan-400 transition" title="Алыстату"><i class="fa-solid fa-minus"></i></button>
+                </div>
+            </div>
+
+            <!-- Right Side: Bone Detailed Information -->
+            <div class="lg:col-span-3 space-y-4">
+                <div class="glass-panel p-5 rounded-2xl border border-brand-border h-full flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-brand-border pb-3 mb-4">
+                            <h2 id="detail-title" class="text-base font-bold text-cyan-400 flex items-center gap-2">
+                                <i class="fa-solid fa-circle-info"></i> Бас сүйек (Cranium)
+                            </h2>
+                            <span id="detail-bone-count" class="text-xs bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30">23 сүйек</span>
+                        </div>
+
+                        <!-- Content Sections -->
+                        <div class="space-y-4 text-xs leading-relaxed text-slate-300">
+                            <div>
+                                <h4 class="font-semibold text-slate-200 mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                                    <i class="fa-solid fa-sitemap text-cyan-400"></i> Құрылымы мен бөліктері
+                                </h4>
+                                <p id="detail-structure" class="text-slate-400">Бас сүйек екі негізгі бөліктен тұрады: ми сауыты (миды қорғайды) және бет бөлімі. Маңдай, төбе, шүйде, самай сүйектерінен құралады.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-semibold text-slate-200 mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                                    <i class="fa-solid fa-microscope text-cyan-400"></i> Сүйек затының құрамы
+                                </h4>
+                                <p id="detail-composition" class="text-slate-400">Тығыз заты сыртқы беріктікті қамтамасыз етсе, кемікті заты жеңілдік пен қан түзу процесін жеңілдетеді.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-semibold text-slate-200 mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                                    <i class="fa-solid fa-gears text-cyan-400"></i> Атқаратын негізгі қызметтері
+                                </h4>
+                                <ul id="detail-functions" class="list-disc list-inside text-slate-400 space-y-1">
+                                    <li>Миды механикалық зақымданудан қорғау</li>
+                                    <li>Сезім мүшелеріне (көз, мурын, құлақ) тірек болу</li>
+                                    <li>Ас қорыту мен тыныс алудың бастапқы мүшелерінің қаңқасын құрау</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <h4 class="font-semibold text-slate-200 mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wide">
+                                    <i class="fa-solid fa-link text-cyan-400"></i> Сүйектердің байланысу түрі
+                                </h4>
+                                <span id="detail-connection" class="inline-block bg-brand-card px-2.5 py-1 rounded-md text-cyan-300 border border-brand-border">Қозғалмайтын (Жікті байланыс - Сүйек жіктері)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Did You Know Card -->
+                    <div class="mt-4 p-3 bg-cyan-950/30 border border-cyan-500/20 rounded-xl">
+                        <p class="text-[11px] text-cyan-300/90 italic flex items-start gap-2">
+                            <i class="fa-solid fa-lightbulb text-amber-400 text-sm mt-0.5"></i>
+                            <span id="detail-fact">Бала туылғанда бас сүйектері толық бітіспейді, арасында "еңбек" деп аталатын жұмсақ жарғақшалар болады.</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: RESEARCH PROJECT PANEL (ЗЕРТТЕУ ЖОБАСЫ) -->
+        <section id="section-research" class="hidden space-y-6">
+            <!-- Research Header Banner -->
+            <div class="glass-panel p-6 rounded-2xl border border-brand-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-brand-card via-brand-dark to-brand-card">
+                <div>
+                    <span class="text-xs font-bold text-cyan-400 uppercase tracking-widest bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/30">Ғылыми-зерттеу Жобасы</span>
+                    <h2 class="text-xl md:text-2xl font-extrabold text-white mt-2">
+                        «3D визуализация арқылы адам қаңқасы жүйесін меңгеру тиімділігі»
+                    </h2>
+                    <p class="text-xs md:text-sm text-slate-400 mt-1 max-w-3xl">
+                        <b>Зерттеу сұрағы:</b> 3D модель арқылы сүйектердің құрылымы мен қызметін меңгеру жеңілдей ме? Әрі оқушылардың білім сапасы мен есте сақтау жылдамдығы қалай өзгереді?
+                    </p>
+                </div>
+                <div class="flex-shrink-0 bg-cyan-500/20 p-4 rounded-2xl border border-cyan-400/30 text-center">
+                    <span class="block text-2xl font-black text-cyan-300">+35%</span>
+                    <span class="text-[10px] uppercase tracking-wider text-slate-300">Тиімділік өсімі</span>
+                </div>
+            </div>
+
+            <!-- Project Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1: Goal & Tasks -->
+                <div class="glass-panel p-5 rounded-2xl border border-brand-border space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                        <i class="fa-solid fa-bullseye text-lg"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">1. Мақсаты мен Міндеттері</h3>
+                    <ul class="text-xs text-slate-300 space-y-2 list-disc list-inside">
+                        <li><b>Мақсаты:</b> 3D визуализацияның сүйек жүйесін оқытудағы интерактивті артықшылықтарын негіздеу.</li>
+                        <li><b>Міндет 1:</b> Адам қаңқасының 3D модельдік интерактивті платформасын құрастыру.</li>
+                        <li><b>Міндет 2:</b> Дәстүрлі 2D оқулықтар мен 3D интерактивті әдісті салыстырмалы эксперимент арқылы сынау.</li>
+                        <li><b>Міндет 3:</b> Эксперименттік деректерді талдап, тиімділік коэффицентін есептеу.</li>
+                    </ul>
+                </div>
+
+                <!-- Card 2: Hypothesis -->
+                <div class="glass-panel p-5 rounded-2xl border border-brand-border space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                        <i class="fa-solid fa-lightbulb text-lg"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">2. Ғылыми Болжам (Гипотеза)</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Егер биология сабағында адам қаңқасы жүйесін оқытуда <b>3D модельдеу мен интерактивті зерттеу әдістері</b> қолданылса, онда оқушылардың сүйек құрылымы мен анатомиялық терминдерді есте сақтау жылдамдығы <b>35%-ға өсіп</b>, тақырыпты меңгеру тереңдігі артады.
+                    </p>
+                    <div class="p-3 bg-brand-dark rounded-xl border border-brand-border text-[11px] text-slate-400">
+                        <i class="fa-solid fa-quote-left text-cyan-400 mr-1"></i> Визуалды ментальды карталар кеңістіктік ойлауды белсендіреді.
+                    </div>
+                </div>
+
+                <!-- Card 3: Research Methods -->
+                <div class="glass-panel p-5 rounded-2xl border border-brand-border space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <i class="fa-solid fa-microscope text-lg"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">3. Зерттеу Әдістері</h3>
+                    <div class="space-y-2 text-xs text-slate-300">
+                        <div class="p-2 bg-brand-dark/60 rounded-lg border border-brand-border flex items-center gap-2">
+                            <i class="fa-solid fa-scale-balanced text-cyan-400"></i>
+                            <span><b>Салыстырмалы Талдау:</b> 2D суреттер мен 3D модель айырмашылығы.</span>
+                        </div>
+                        <div class="p-2 bg-brand-dark/60 rounded-lg border border-brand-border flex items-center gap-2">
+                            <i class="fa-solid fa-vial text-emerald-400"></i>
+                            <span><b>Педагогикалық Эксперимент:</b> 2 бақылау тобы (А - 2D, Б - 3D).</span>
+                        </div>
+                        <div class="p-2 bg-brand-dark/60 rounded-lg border border-brand-border flex items-center gap-2">
+                            <i class="fa-solid fa-clipboard-question text-amber-400"></i>
+                            <span><b>Тестілеу және Сауалнама:</b> Нәтижелердің статистикасы.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Chart Section: Comparative Experiment Results -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Chart: Test Scores Comparison -->
+                <div class="lg:col-span-7 glass-panel p-5 rounded-2xl border border-brand-border flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold text-white text-sm md:text-base flex items-center gap-2">
+                                <i class="fa-solid fa-chart-column text-cyan-400"></i>
+                                Эксперимент Нәтижесі: Білім Сапасы және Тақырыпты Меңгеру (%)
+                            </h3>
+                            <span class="text-[11px] text-slate-400">60 оқушы қатысты</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4">
+                            Эксперимент барысында А тобы дәстүрлі 2D суреттермен, ал Б тобы интерактивті 3D платформамен білім алды:
+                        </p>
+                    </div>
+                    <div class="w-full h-[260px] relative">
+                        <canvas id="experimentChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Right Chart: Speed & Engagement Radar -->
+                <div class="lg:col-span-5 glass-panel p-5 rounded-2xl border border-brand-border flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-white text-sm md:text-base mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-cyan-400"></i>
+                            Оқу Параметрлері Спектрі
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-4">
+                            3D форматының негізгі көрсеткіштері бойынша дәстүрлі оқытудан артықшылықтары.
+                        </p>
+                    </div>
+                    <div class="w-full h-[250px] flex items-center justify-center">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: QUIZ & ASSESSMENT SECTION -->
+        <section id="section-quiz" class="hidden space-y-6">
+            <div class="max-w-3xl mx-auto space-y-6">
+                <!-- Quiz Intro Box -->
+                <div class="glass-panel p-6 rounded-2xl border border-brand-border text-center space-y-3">
+                    <div class="w-12 h-12 rounded-full bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-400 mx-auto">
+                        <i class="fa-solid fa-circle-question text-xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-white">Сүйек жүйесі бойынша интерактивті тест</h2>
+                    <p class="text-xs text-slate-400">
+                        3D визуализатордан алған біліміңізді тексеріңіз. 5 сұраққа жауап беріп, зерттеу нәтижесіне өз үлесіңізді қосыңыз!
+                    </p>
+                </div>
+
+                <!-- Quiz Container -->
+                <div id="quiz-box" class="glass-panel p-6 rounded-2xl border border-brand-border space-y-6">
+                    <div class="flex items-center justify-between border-b border-brand-border pb-3">
+                        <span id="quiz-progress-text" class="text-xs font-semibold text-cyan-400">Сұрақ 1 / 5</span>
+                        <div class="w-36 bg-brand-dark rounded-full h-2 border border-brand-border overflow-hidden">
+                            <div id="quiz-progress-bar" class="bg-cyan-400 h-full w-1/5 transition-all duration-300"></div>
+                        </div>
+                    </div>
+
+                    <!-- Question Content -->
+                    <div class="space-y-4">
+                        <h3 id="quiz-question" class="text-sm md:text-base font-semibold text-white">
+                            Сұрақ жүктелуде...
+                        </h3>
+                        <div id="quiz-options" class="space-y-2.5">
+                            <!-- Options rendered dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Action Controls -->
+                    <div class="flex justify-between items-center pt-2">
+                        <button id="btn-prev-quiz" onclick="prevQuestion()" class="px-4 py-2 rounded-xl bg-brand-card hover:bg-brand-border text-xs text-slate-300 disabled:opacity-40 transition">
+                            <i class="fa-solid fa-arrow-left mr-1"></i> Алдыңғы
+                        </button>
+                        <button id="btn-next-quiz" onclick="nextQuestion()" class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs transition shadow-lg shadow-cyan-500/20">
+                            Келесі <i class="fa-solid fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quiz Results Box (Initially Hidden) -->
+                <div id="quiz-result-box" class="hidden glass-panel p-8 rounded-2xl border border-brand-border text-center space-y-5">
+                    <div class="w-16 h-16 rounded-full bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400 mx-auto text-2xl">
+                        <i class="fa-solid fa-trophy animate-bounce"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-white">Тест Аяқталды!</h3>
+                        <p class="text-xs text-slate-400 mt-1">Сіздің нәтижеңіз:</p>
+                    </div>
+                    <div class="text-4xl font-extrabold text-cyan-400" id="quiz-score">
+                        4 / 5
+                    </div>
+                    <p id="quiz-feedback-text" class="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+                        Өте жақсы нәтиже! 3D визуализация арқылы сүйек жүйесінің анатомиялық құрылымын жоғары деңгейде меңгердіңіз.
+                    </p>
+
+                    <!-- Real-time Survey Collector for Research -->
+                    <div class="p-4 bg-brand-dark/80 rounded-xl border border-brand-border text-left space-y-3">
+                        <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                            <i class="fa-solid fa-comment-medical"></i> 3D Модельді Бағалау (Зерттеу сауалнамасы)
+                        </h4>
+                        <p class="text-xs text-slate-400">3D визуализация сүйектердің орналасуы мен қызметін түсінуді жеңілдетті ме?</p>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="submitSurvey('Иә, өте қатты жеңілдетті')" class="survey-btn text-xs px-3 py-1.5 rounded-lg bg-brand-card hover:bg-cyan-500/20 hover:border-cyan-500/40 border border-brand-border text-slate-200 transition">Иә, өте қатты</button>
+                            <button onclick="submitSurvey('Дәстүрлі кітаптан әлдеқайда жақсы')" class="survey-btn text-xs px-3 py-1.5 rounded-lg bg-brand-card hover:bg-cyan-500/20 hover:border-cyan-500/40 border border-brand-border text-slate-200 transition">Кітаптан жақсы</button>
+                            <button onclick="submitSurvey('Аздап көмектесті')" class="survey-btn text-xs px-3 py-1.5 rounded-lg bg-brand-card hover:bg-cyan-500/20 hover:border-cyan-500/40 border border-brand-border text-slate-200 transition">Аздап көмектесті</button>
+                        </div>
+                        <div id="survey-ack" class="hidden text-[11px] text-emerald-400 font-semibold pt-1">
+                            ✓ Тіркелді! Зерттеу базасына пікіріңіз қосылды.
+                        </div>
+                    </div>
+
+                    <button onclick="resetQuiz()" class="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs transition">
+                        Тестті қайта тапсыру
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="glass-panel border-t border-brand-border py-4 px-6 text-center text-xs text-slate-400 mt-6">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div>
+                <span class="font-semibold text-slate-300">SKELETON 3D</span> © 2026 Интерактивті Ғылыми-Биологиялық Платформасы
+            </div>
+            <div class="flex items-center space-x-4 text-cyan-400/80">
+                <span class="flex items-center gap-1"><i class="fa-solid fa-atom"></i> HTML5 / Three.js</span>
+                <span class="flex items-center gap-1"><i class="fa-solid fa-brain"></i> STEM оқыту</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT CODE FOR INTERACTIVITY & THREE.JS 3D MODEL -->
+    <script>
+        /* ==========================================
+           1. DATA STRUCTURES & ANATOMICAL INFO
+           ========================================== */
+        const boneData = {
+            skull: {
+                title: "Бас сүйек (Cranium)",
+                count: "23 сүйек",
+                structure: "Бас сүйек екі негізгі бөліктен тұрады: ми сауыты (миды қорғайды) және бет бөлімі. Маңдай, төбе, шүйде, самай, үстіңгі және астыңғы жақ сүйектерінен құралады.",
+                composition: "Сыртқы және ішкі тығыз (компакт) сүйек пластинкалары арасында кемікті (губчатое) зат орналасқан.",
+                functions: [
+                    "Миды және сезім мүшелерін механикалық зақымданудан қорғау",
+                    "Тыныс алу және ас қорыту мүшелерінің бастапқы бөліктеріне тірек болу",
+                    "Шайнау бұлшықеттеріне бекіну нүктесін қамтамасыз ету"
+                ],
+                connection: "Қозғалмайтын (Жікті байланыс - Сүйек жіктері). Тек астыңғы жақ сүйегі ғана қозғалмалы.",
+                fact: "Бала туылғанда бас сүйектері толық бітіспейді, арасында 'еңбек' деп аталатын жұмсақ жарғақшалар болады."
+            },
+            spine: {
+                title: "Омыртқа жотасы (Vertebral Column)",
+                count: "33-34 омыртқа",
+                structure: "5 бөлімнен тұрады: мойын (7), көкірек (12), бел (5), сегізкөз (5 бітіскен), құйрық (4-5 бітіскен). Адам денесінің негізгі өсі.",
+                composition: "Омыртқа денесі кемікті заттан, ал доғалары мен өсінділері тығыз сүйек затынан түзілген.",
+                functions: [
+                    "Тұлғаға серпімді тірек болу және дене салмағын ұстап тұру",
+                    "Омыртқа өзегінде орналасқан жұлынды қорғау",
+                    "Амортизация (S-тәрізді иілімдер арқылы соққыны бәсеңдету)"
+                ],
+                connection: "Жартылай қозғалмалы (Омыртқааралық шеміршек дискілері арқылы).",
+                fact: "Адамның омыртқасы күні бойы ауырлық күшінен сығылып, кешке қарай бойы 1-2 см-ге қысқаруы мүмкін."
+            },
+            ribs: {
+                title: "Көкірек қуысы (Rib Cage / Thorax)",
+                count: "12 жұп қабырға + Төс сүйегі",
+                structure: "12 жұп қабырға, көкірек омыртқалары және төс (стернум) сүйегінен тұрады. 1-7 жұп шынайы, 8-10 жалған, 11-12 ауытқымалы қабырғалар.",
+                composition: "Жалпақ сүйектерге жатады, ішінде қызыл сүйек кемігі мол орналасқан.",
+                functions: [
+                    "Жүрек пен өкпені сыртқы соққылардан қорғау",
+                    "Тыныс алу қозғалыстарын қамтамасыз ету (қабырғааралық бұлшықеттер көмегімен)",
+                    "Қан түзу (гемопоэз) процесіне қатысу"
+                ],
+                connection: "Жартылай қозғалмалы (Қабырға шеміршектері арқылы төс сүйегіне бекінеді).",
+                fact: "Тыныс алғанда көкірек қуысының көлемі шеміршектердің серпімділігі арқасында ұлғайып-кішірейіп отырады."
+            },
+            arms: {
+                title: "Жоғарғы аяқ (Қол) сүйектері (Upper Limbs)",
+                count: "64 сүйек (екі қолда)",
+                structure: "Иық белдеуі (бұғана, жауырын) және еркін қол сүйектерінен (тоқпан жілік, кәрі жілік, шынтақ сүйегі, қол басы сүйектері) тұрады.",
+                composition: "Ұзын түтікті сүйектер (тоқпан, кәрі жілік) сырты тығыз зат, іші сары сүйек майы толған қуысты болып келеді.",
+                functions: [
+                    "Еңбек ету, заттарды ұстау және күрделі манипуляциялар жасау",
+                    "Жоғары қозғалмалы икемділік пен амплитуданы қамтамасыз ету"
+                ],
+                connection: "Қозғалмалы (Буындар: иық, шынтақ, білек-қолбасы буындары).",
+                fact: "Адамның бас бармағы басқа саусақтарға қарама-қарсы бағытталған, бұл еңбек етуге мүмкіндік беретін басты анатомиялық ерекшелік."
+            },
+            legs: {
+                title: "Төменгі аяқ сүйектері (Lower Limbs)",
+                count: "62 сүйек (екі аяқта)",
+                structure: "Жамбас белдеуі (жамбас сүйектері) және еркін аяқ сүйектерінен (ортан жілік, асықты жілік, шыбық дәу сүйегі, тобық, аяқ басы) тұрады.",
+                composition: "Ортан жілік – адам денесіндегі ең ұзын әрі ең берік түтікті сүйек болып табылады.",
+                functions: [
+                    "Денені тік ұстау және кеңістікте қозғалу (жүру, жүгіру)",
+                    "Бүкіл дене салмағын көтеру және салмақты тең бөлу"
+                ],
+                connection: "Қозғалмалы (Шар тәрізді жамбас-ортан жілік буыны, топсалы тізе буыны).",
+                fact: "Ортан жілік (femur) өте берік, ол вертикальды бағытта 1.5 тоннаға жуық салмақ жүктемесіне шыдай алады."
+            }
+        };
+
+        /* ==========================================
+           2. NAVIGATION & TAB SWITCHING LOGIC
+           ========================================== */
+        function switchTab(tabName) {
+            const tabs = ['3d', 'research', 'quiz'];
+            tabs.forEach(t => {
+                const sec = document.getElementById(`section-${t}`);
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === tabName) {
+                    sec.classList.remove('hidden');
+                    btn.classList.add('text-cyan-400', 'bg-cyan-500/10', 'border', 'border-cyan-500/30');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    sec.classList.add('hidden');
+                    btn.classList.remove('text-cyan-400', 'bg-cyan-500/10', 'border', 'border-cyan-500/30');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            if (tabName === 'research') {
+                initCharts();
+            }
+        }
+
+        /* ==========================================
+           3. THREE.JS 3D SKELETON PROCEDURAL MODEL
+           ========================================== */
+        let scene, camera, renderer, controls;
+        let skeletonGroup = new THREE.Group();
+        let bodyParts = {};
+        let isAutoRotate = true;
+
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x070c19, 0.08);
+
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(0, 0.5, 7.5);
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 1.8;
+            controls.minDistance = 2;
+            controls.maxDistance = 12;
+
+            // Lighting setup
+            const ambientLight = new THREE.AmbientLight(0xdff0ff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0x22d3ee, 1.2);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            const backLight = new THREE.DirectionalLight(0x0891b2, 0.8);
+            backLight.position.set(-5, -5, -5);
+            scene.add(backLight);
+
+            // Grid Floor
+            const gridHelper = new THREE.GridHelper(12, 20, 0x06b6d4, 0x1e2d54);
+            gridHelper.position.y = -3.2;
+            scene.add(gridHelper);
+
+            // Build Procedural Skeleton Model
+            buildProceduralSkeleton();
+
+            scene.add(skeletonGroup);
+
+            // Window resize handler
+            window.addEventListener('resize', onWindowResize);
+
+            // Animation Loop
+            animate();
+        }
+
+        // Procedural 3D Skeleton Generator using Geometries
+        function buildProceduralSkeleton() {
+            const boneMaterial = new THREE.MeshStandardMaterial({
+                color: 0xe2e8f0,
+                roughness: 0.3,
+                metalness: 0.1
+            });
+
+            const highlightMat = new THREE.MeshStandardMaterial({
+                color: 0x22d3ee,
+                emissive: 0x0891b2,
+                roughness: 0.2
+            });
+
+            // 1. SKULL (Бас сүйек)
+            const skullGroup = new THREE.Group();
+            const craniumGeo = new THREE.SphereGeometry(0.5, 24, 24);
+            craniumGeo.scale(1, 1.15, 1.05);
+            const cranium = new THREE.Mesh(craniumGeo, boneMaterial.clone());
+            cranium.position.y = 2.4;
+            skullGroup.add(cranium);
+
+            const jawGeo = new THREE.BoxGeometry(0.45, 0.3, 0.45);
+            const jaw = new THREE.Mesh(jawGeo, boneMaterial.clone());
+            jaw.position.set(0, 2.0, 0.1);
+            skullGroup.add(jaw);
+            bodyParts.skull = skullGroup;
+            skeletonGroup.add(skullGroup);
+
+            // 2. SPINE (Омыртқа жотасы)
+            const spineGroup = new THREE.Group();
+            for (let i = 0; i < 14; i++) {
+                const vertGeo = new THREE.CylinderGeometry(0.12 - i*0.003, 0.13 - i*0.003, 0.08, 12);
+                const vert = new THREE.Mesh(vertGeo, boneMaterial.clone());
+                vert.position.y = 1.75 - (i * 0.13);
+                vert.position.z = Math.sin(i * 0.3) * 0.04;
+                spineGroup.add(vert);
+            }
+            bodyParts.spine = spineGroup;
+            skeletonGroup.add(spineGroup);
+
+            // 3. RIB CAGE (Көкірек қуысы)
+            const ribsGroup = new THREE.Group();
+            // Sternum
+            const sternumGeo = new THREE.BoxGeometry(0.1, 0.9, 0.05);
+            const sternum = new THREE.Mesh(sternumGeo, boneMaterial.clone());
+            sternum.position.set(0, 1.0, 0.45);
+            ribsGroup.add(sternum);
+
+            // Rib Arches
+            for (let i = 0; i < 8; i++) {
+                const ribRadius = 0.45 - (i * 0.02);
+                const ribGeo = new THREE.TorusGeometry(ribRadius, 0.035, 8, 24, Math.PI * 1.5);
+                const ribLeft = new THREE.Mesh(ribGeo, boneMaterial.clone());
+                ribLeft.rotation.x = Math.PI / 2 + 0.1;
+                ribLeft.rotation.y = 0.2;
+                ribLeft.position.set(0, 1.4 - (i * 0.11), 0.1);
+                ribsGroup.add(ribLeft);
+            }
+            bodyParts.ribs = ribsGroup;
+            skeletonGroup.add(ribsGroup);
+
+            // 4. ARMS (Жоғарғы аяқ / Қол сүйектері)
+            const armsGroup = new THREE.Group();
+            // Clavicles / Shoulders
+            const clavicleGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.3);
+            clavicleGeo.rotateZ(Math.PI / 2);
+            const clavicle = new THREE.Mesh(clavicleGeo, boneMaterial.clone());
+            clavicle.position.set(0, 1.7, 0.1);
+            armsGroup.add(clavicle);
+
+            [-1, 1].forEach(side => {
+                // Humerus
+                const humerusGeo = new THREE.CylinderGeometry(0.07, 0.06, 0.9, 12);
+                const humerus = new THREE.Mesh(humerusGeo, boneMaterial.clone());
+                humerus.position.set(0.75 * side, 1.1, 0);
+                humerus.rotation.z = -0.15 * side;
+                armsGroup.add(humerus);
+
+                // Forearm (Radius/Ulna)
+                const forearmGeo = new THREE.CylinderGeometry(0.05, 0.04, 0.85, 12);
+                const forearm = new THREE.Mesh(forearmGeo, boneMaterial.clone());
+                forearm.position.set(0.9 * side, 0.2, 0);
+                armsGroup.add(forearm);
+
+                // Hand
+                const handGeo = new THREE.BoxGeometry(0.15, 0.25, 0.05);
+                const hand = new THREE.Mesh(handGeo, boneMaterial.clone());
+                hand.position.set(0.95 * side, -0.35, 0);
+                armsGroup.add(hand);
+            });
+            bodyParts.arms = armsGroup;
+            skeletonGroup.add(armsGroup);
+
+            // 5. LEGS & PELVIS (Төменгі аяқ сүйектері)
+            const legsGroup = new THREE.Group();
+            // Pelvis
+            const pelvisGeo = new THREE.TorusGeometry(0.45, 0.12, 10, 16, Math.PI);
+            const pelvis = new THREE.Mesh(pelvisGeo, boneMaterial.clone());
+            pelvis.rotation.x = Math.PI / 2;
+            pelvis.position.set(0, -0.05, 0);
+            legsGroup.add(pelvis);
+
+            [-1, 1].forEach(side => {
+                // Femur (Ортан жілік)
+                const femurGeo = new THREE.CylinderGeometry(0.09, 0.07, 1.2, 12);
+                const femur = new THREE.Mesh(femurGeo, boneMaterial.clone());
+                femur.position.set(0.35 * side, -0.75, 0);
+                femur.rotation.z = 0.08 * side;
+                legsGroup.add(femur);
+
+                // Knee cap
+                const kneeGeo = new THREE.SphereGeometry(0.08, 12, 12);
+                const knee = new THREE.Mesh(kneeGeo, boneMaterial.clone());
+                knee.position.set(0.3 * side, -1.38, 0.1);
+                legsGroup.add(knee);
+
+                // Tibia/Fibula (Асықты жілік)
+                const tibiaGeo = new THREE.CylinderGeometry(0.07, 0.05, 1.15, 12);
+                const tibia = new THREE.Mesh(tibiaGeo, boneMaterial.clone());
+                tibia.position.set(0.3 * side, -2.0, 0);
+                legsGroup.add(tibia);
+
+                // Foot
+                const footGeo = new THREE.BoxGeometry(0.18, 0.1, 0.4);
+                const foot = new THREE.Mesh(footGeo, boneMaterial.clone());
+                foot.position.set(0.3 * side, -2.6, 0.12);
+                legsGroup.add(foot);
+            });
+            bodyParts.legs = legsGroup;
+            skeletonGroup.add(legsGroup);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (isAutoRotate && skeletonGroup) {
+                skeletonGroup.rotation.y += 0.005;
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        /* 3D HIGHLIGHT & CAMERA LOGIC */
+        function highlightRegion(regionKey) {
+            // Update Active Styling for Buttons
+            document.querySelectorAll('.region-btn').forEach(btn => {
+                btn.classList.remove('bg-cyan-500/20', 'border-cyan-400', 'text-cyan-300');
+            });
+
+            // Reset materials
+            Object.keys(bodyParts).forEach(key => {
+                bodyParts[key].traverse(child => {
+                    if (child.isMesh) {
+                        child.material.color.setHex(0xe2e8f0);
+                        child.material.emissive.setHex(0x000000);
+                    }
+                });
+            });
+
+            if (regionKey === 'all') {
+                document.getElementById('active-region-title').innerText = "Толық қаңқа";
+                resetCamera();
+                return;
+            }
+
+            // Highlight selected region
+            if (bodyParts[regionKey]) {
+                bodyParts[regionKey].traverse(child => {
+                    if (child.isMesh) {
+                        child.material.color.setHex(0x22d3ee);
+                        child.material.emissive.setHex(0x0891b2);
+                    }
+                });
+
+                // Zoom camera to region target
+                const targets = {
+                    skull: { y: 2.2, dist: 3.5 },
+                    spine: { y: 1.0, dist: 4.0 },
+                    ribs: { y: 1.1, dist: 3.8 },
+                    arms: { y: 0.9, dist: 4.5 },
+                    legs: { y: -1.3, dist: 5.0 }
+                };
+
+                const t = targets[regionKey];
+                if (t) {
+                    controls.target.set(0, t.y, 0);
+                    camera.position.set(0, t.y, t.dist);
+                }
+            }
+
+            // Update Details Panel
+            const info = boneData[regionKey];
+            if (info) {
+                document.getElementById('detail-title').innerHTML = `<i class="fa-solid fa-circle-info"></i> ${info.title}`;
+                document.getElementById('detail-bone-count').innerText = info.count;
+                document.getElementById('detail-structure').innerText = info.structure;
+                document.getElementById('detail-composition').innerText = info.composition;
+                
+                const funcList = document.getElementById('detail-functions');
+                funcList.innerHTML = info.functions.map(f => `<li>${f}</li>`).join('');
+                
+                document.getElementById('detail-connection').innerText = info.connection;
+                document.getElementById('detail-fact').innerText = info.fact;
+                document.getElementById('active-region-title').innerText = info.title.split(' ')[0];
+            }
+        }
+
+        function toggleAutoRotate() {
+            isAutoRotate = !isAutoRotate;
+            const btn = document.getElementById('btn-auto-rotate');
+            if (isAutoRotate) {
+                btn.innerHTML = `<i class="fa-solid fa-arrows-spin"></i> <span>Авто-айналуды өшіру</span>`;
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-play"></i> <span>Авто-айналуды қосу</span>`;
+            }
+        }
+
+        function resetCamera() {
+            controls.target.set(0, 0, 0);
+            camera.position.set(0, 0.5, 7.5);
+        }
+
+        function zoom3D(factor) {
+            camera.position.multiplyScalar(factor);
+        }
+
+        /* ==========================================
+           4. RESEARCH CHARTS (CHART.JS)
+           ========================================== */
+        let experimentChartInstance = null;
+        let radarChartInstance = null;
+
+        function initCharts() {
+            if (experimentChartInstance) return; // Prevent double init
+
+            // 1. Bar Chart: Comparative Results
+            const ctx1 = document.getElementById('experimentChart').getContext('2d');
+            experimentChartInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Тақырыпты түсіну', 'Анатомиялық терминдер', 'Есте сақтау ұзақтығы', 'Тест орташа балы'],
+                    datasets: [
+                        {
+                            label: 'А Тобы (Дәстүрлі 2D оқулық)',
+                            data: [58, 52, 45, 62],
+                            backgroundColor: 'rgba(100, 116, 139, 0.7)',
+                            borderColor: 'rgba(148, 163, 184, 1)',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Б Тобы (Интерактивті 3D Платформа)',
+                            data: [92, 88, 85, 94],
+                            backgroundColor: 'rgba(6, 182, 212, 0.8)',
+                            borderColor: 'rgba(34, 211, 238, 1)',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#cbd5e1', font: { family: 'Inter', size: 11 } } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { color: '#94a3b8', callback: v => v + '%' },
+                            grid: { color: 'rgba(30, 45, 84, 0.5)' }
+                        },
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // 2. Radar Chart: Learning Parameters
+            const ctx2 = document.getElementById('radarChart').getContext('2d');
+            radarChartInstance = new Chart(ctx2, {
+                type: 'radar',
+                data: {
+                    labels: ['Қызығушылық', 'Кеңістіктік ойлау', 'Жылдамдық', 'Байқағыштық', 'Дәлдік'],
+                    datasets: [{
+                        label: '3D Интерактивті оқыту',
+                        data: [95, 90, 85, 92, 88],
+                        fill: true,
+                        backgroundColor: 'rgba(34, 211, 238, 0.25)',
+                        borderColor: '#22d3ee',
+                        pointBackgroundColor: '#22d3ee'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(30, 45, 84, 0.6)' },
+                            grid: { color: 'rgba(30, 45, 84, 0.6)' },
+                            pointLabels: { color: '#cbd5e1', font: { size: 10 } },
+                            ticks: { display: false, backdropColor: 'transparent' }
+                        }
+                    }
+                }
+            });
+        }
+
+        /* ==========================================
+           5. INTERACTIVE QUIZ SYSTEM
+           ========================================== */
+        const quizQuestions = [
+            {
+                q: "1. Адам денесіндегі ең ұзын әрі ең берік сүйек қайсысы?",
+                options: ["Тоқпан жілік", "Ортан жілік (Femur)", "Асықты жілік", "Төс сүйегі"],
+                correct: 1
+            },
+            {
+                q: "2. Бас сүйектің сүйектері өзара байланысудың қай түріне жатады?",
+                options: ["Қозғалмалы (буын)", "Жартылай қозғалмалы", "Қозғалмайтын (жікті байланыс)", "Шеміршекті байланыс"],
+                correct: 2
+            },
+            {
+                q: "3. Адамның омыртқа жотасы неше бөлімнен және қанша омыртқадан тұрады?",
+                options: ["3 бөлім, 20 омыртқа", "5 бөлім, 33-34 омыртқа", "4 бөлім, 40 омыртқа", "6 бөлім, 28 омыртқа"],
+                correct: 1
+            },
+            {
+                q: "4. Сүйектің жеңілдігін және қан түзу (гемопоэз) қызметін қамтамасыз ететін құрылым:",
+                options: ["Тығыз (компакт) зат", "Кемікті (губчатое) зат", "Сүйек қабығы", "Гиалинді шеміршек"],
+                correct: 1
+            },
+            {
+                q: "5. Көкірек қуысы неше жұп қабырғадан құралады?",
+                options: ["10 жұп", "12 жұп", "14 жұп", "8 жұп"],
+                correct: 1
+            }
+        ];
+
+        let currentQIndex = 0;
+        let userAnswers = new Array(quizQuestions.length).fill(null);
+
+        function renderQuestion() {
+            const q = quizQuestions[currentQIndex];
+            document.getElementById('quiz-progress-text').innerText = `Сұрақ ${currentQIndex + 1} / ${quizQuestions.length}`;
+            document.getElementById('quiz-progress-bar').style.width = `${((currentQIndex + 1) / quizQuestions.length) * 100}%`;
+            document.getElementById('quiz-question').innerText = q.q;
+
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((opt, idx) => {
+                const isSelected = userAnswers[currentQIndex] === idx;
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left p-3 rounded-xl border text-xs md:text-sm transition flex items-center justify-between ${
+                    isSelected 
+                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-semibold' 
+                    : 'bg-brand-card hover:bg-brand-border/60 border-brand-border text-slate-300'
+                }`;
+                btn.onclick = () => selectAnswer(idx);
+                btn.innerHTML = `
+                    <span>${opt}</span>
+                    <i class="fa-regular ${isSelected ? 'fa-circle-check text-cyan-400' : 'fa-circle text-slate-500'}"></i>
+                `;
+                optionsContainer.appendChild(btn);
+            });
+
+            // Prev button state
+            document.getElementById('btn-prev-quiz').disabled = currentQIndex === 0;
+            
+            // Next button text
+            const nextBtn = document.getElementById('btn-next-quiz');
+            if (currentQIndex === quizQuestions.length - 1) {
+                nextBtn.innerHTML = `Нәтижені көру <i class="fa-solid fa-check ml-1"></i>`;
+            } else {
+                nextBtn.innerHTML = `Келесі <i class="fa-solid fa-arrow-right ml-1"></i>`;
+            }
+        }
+
+        function selectAnswer(idx) {
+            userAnswers[currentQIndex] = idx;
+            renderQuestion();
+        }
+
+        function nextQuestion() {
+            if (userAnswers[currentQIndex] === null) {
+                alert("Өтініш, жауап нұсқасын таңдаңыз!");
+                return;
+            }
+
+            if (currentQIndex < quizQuestions.length - 1) {
+                currentQIndex++;
+                renderQuestion();
+            } else {
+                showQuizResults();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQIndex > 0) {
+                currentQIndex--;
+                renderQuestion();
+            }
+        }
+
+        function showQuizResults() {
+            let score = 0;
+            quizQuestions.forEach((q, i) => {
+                if (userAnswers[i] === q.correct) score++;
+            });
+
+            document.getElementById('quiz-box').classList.add('hidden');
+            document.getElementById('quiz-result-box').classList.remove('hidden');
+            document.getElementById('quiz-score').innerText = `${score} / ${quizQuestions.length}`;
+
+            const feedback = document.getElementById('quiz-feedback-text');
+            if (score >= 4) {
+                feedback.innerText = "Үздік нәтиже! 3D визуализация арқылы сүйек жүйесінің құрылымы мен анатомиясын терең меңгергеніңізді дәлелдедіңіз.";
+            } else if (score >= 3) {
+                feedback.innerText = "Жақсы нәтиже! Негізгі ұғымдарды білесіз. 3D модельді қайта айналдырып зерттеу арқылы нәтижені бұдан да арттыра аласыз.";
+            } else {
+                feedback.innerText = "Тақырыпты қайта қарау ұсынылады. 3D интерактивті режимге өтіп, сүйектердің орналасуын зерттеп шығыңыз.";
+            }
+        }
+
+        function resetQuiz() {
+            currentQIndex = 0;
+            userAnswers.fill(null);
+            document.getElementById('quiz-result-box').classList.add('hidden');
+            document.getElementById('quiz-box').classList.remove('hidden');
+            document.getElementById('survey-ack').classList.add('hidden');
+            renderQuestion();
+        }
+
+        function submitSurvey(val) {
+            document.getElementById('survey-ack').classList.remove('hidden');
+        }
+
+        /* ==========================================
+           6. INITIALIZATION ON WINDOW LOAD
+           ========================================== */
+        window.onload = function() {
+            init3D();
+            renderQuestion();
+        };
+    </script>
+</body>
+</html>
